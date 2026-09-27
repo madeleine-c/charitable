@@ -1,37 +1,27 @@
-import { getStripeSync, getUncachableStripeClient } from './stripeClient';
-import { storage } from './storage';
+import { getStripeWebhookSecret, getUncachableStripeClient } from './stripeClient.js';
+import { storage } from './storage.js';
 
 export class WebhookHandlers {
-  static async processWebhook(payload: Buffer, signature: string, uuid: string): Promise<void> {
+  static async processWebhook(payload: Buffer, signature: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
       throw new Error(
         'STRIPE WEBHOOK ERROR: Payload must be a Buffer. ' +
         'Received type: ' + typeof payload + '. ' +
-        'This usually means express.json() parsed the body before reaching this handler. ' +
-        'FIX: Ensure webhook route is registered BEFORE app.use(express.json()).'
+        'Ensure the webhook route uses express.raw() and is registered BEFORE express.json().'
       );
     }
 
-    const sync = await getStripeSync();
-    
     const stripe = await getUncachableStripeClient();
-    const webhooks = await stripe.webhookEndpoints.list({ limit: 10 });
-    const webhook = webhooks.data.find(w => w.url?.includes(uuid));
-    
-    if (webhook) {
-      const event = stripe.webhooks.constructEvent(
-        payload,
-        signature,
-        webhook.secret || ''
-      );
-      
-      if (event.type === 'checkout.session.completed') {
-        const session = event.data.object as any;
-        await WebhookHandlers.handleCheckoutComplete(session.id);
-      }
+    const event = stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      getStripeWebhookSecret()
+    );
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as any;
+      await WebhookHandlers.handleCheckoutComplete(session.id);
     }
-    
-    await sync.processWebhook(payload, signature, uuid);
   }
 
   static async handleCheckoutComplete(sessionId: string): Promise<void> {

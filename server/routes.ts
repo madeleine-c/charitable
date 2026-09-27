@@ -1,14 +1,10 @@
 import type { Express } from "express";
-import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
-import { insertNonprofitSchema, insertDonationSchema, insertPostSchema } from "@shared/schema";
+import { storage } from "./storage.js";
+import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient.js";
+import { insertNonprofitSchema, insertDonationSchema, insertPostSchema } from "../shared/schema.js";
 import { z } from "zod";
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+export function registerRoutes(app: Express): void {
   
   app.get("/api/nonprofits", async (req, res) => {
     try {
@@ -595,5 +591,4 @@ export async function registerRoutes(
     }
   });
 
-  return httpServer;
 }
